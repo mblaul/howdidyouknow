@@ -3,9 +3,18 @@
   "module": "index.ts",
   "type": "module",
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/pg": "^8.11.11",
+    "drizzle-kit": "^0.30.2"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@auth/drizzle-adapter": "^1.7.4",
+    "drizzle-orm": "^0.38.4",
+    "node-postgres": "^0.6.2",
+    "pg": "^8.13.1",
+    "postgres": "^3.4.5"
   }
 }
