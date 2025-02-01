@@ -1,5 +1,0 @@
-# deps
-node_modules/
-
-# dbs
-src/db/dev-database.sqlite
