@@ -1,6 +1,5 @@
 import {
   boolean,
-  integer,
   pgTable,
   text,
   timestamp,
@@ -8,8 +7,10 @@ import {
 } from "drizzle-orm/pg-core";
 
 export const gift = pgTable("gift", {
-  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  id: text("id").primaryKey(),
   name: varchar({ length: 255 }).notNull(),
+  link: text("link"),
+  description: text("description"),
 });
 
 export const user = pgTable("user", {
