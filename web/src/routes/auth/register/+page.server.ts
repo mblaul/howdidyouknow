@@ -12,6 +12,6 @@ export const actions = {
     const token = generateSessionToken();
     const session = await createSession(token, "test");
     setSessionTokenCookie(event, token, session.expiresAt);
-    redirect(302, "/");
+    redirect(302, "/in");
   },
 } satisfies Actions;
