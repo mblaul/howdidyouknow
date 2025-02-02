@@ -1,5 +1,5 @@
 import type { InferSelectModel } from "drizzle-orm";
-import { pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { time } from "drizzle-orm/singlestore-core";
 
 // Helpers
@@ -11,7 +11,7 @@ const timestamps = {
 
 // Schema
 export const gift = pgTable("gift", {
-  id: text("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   name: varchar({ length: 255 }).notNull(),
   link: text("link"),
   description: text("description"),
@@ -19,14 +19,14 @@ export const gift = pgTable("gift", {
 });
 
 export const usersTable = pgTable("users", {
-  id: text("id").primaryKey(),
-  email: text("email").notNull(),
+  id: uuid("id").defaultRandom().primaryKey(),
+  email: text("email").notNull().unique(),
   ...timestamps,
 });
 
 export const sessionsTable = pgTable("sessions", {
   id: text("id").primaryKey(),
-  userId: text("user_id")
+  userId: uuid("user_id")
     .notNull()
     .references(() => usersTable.id),
   expiresAt: timestamp("expires_at").notNull(),
