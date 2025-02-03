@@ -1,20 +1,19 @@
 {
   "name": "giftsforme",
   "module": "index.ts",
-  "type": "module",
+  "scripts": {
+    "prettier-watch": "onchange \"**/*\" -- prettier --write --ignore-unknown {{changed}}"
+  },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/pg": "^8.11.11",
-    "drizzle-kit": "^0.30.2"
+    "prettier": "3.4.2",
+    "prettier-plugin-svelte": "^3.3.3"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
+  "type": "module",
   "dependencies": {
-    "@auth/drizzle-adapter": "^1.7.4",
-    "drizzle-orm": "^0.38.4",
-    "node-postgres": "^0.6.2",
-    "pg": "^8.13.1",
-    "postgres": "^3.4.5"
+    "onchange": "^7.1.0"
   }
 }
