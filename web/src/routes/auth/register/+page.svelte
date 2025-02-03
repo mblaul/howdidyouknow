@@ -8,17 +8,17 @@
     superForm,
   } from "sveltekit-superforms";
   import { zodClient } from "sveltekit-superforms/adapters";
- 
+
   export let data: SuperValidated<Infer<FormSchema>>;
- 
+
   const form = superForm(data, {
-		dataType: 'json',
+    dataType: "json",
     validators: zodClient(formSchema),
   });
- 
+
   const { form: formData, enhance } = form;
 </script>
- 
+
 <form method="POST" use:enhance>
   <Form.Field {form} name="email">
     <Form.Control let:attrs>
@@ -30,4 +30,3 @@
   </Form.Field>
   <Form.Button>Submit</Form.Button>
 </form>
-

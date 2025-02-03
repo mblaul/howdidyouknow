@@ -18,7 +18,7 @@ db.query(
       updatedAtTimestamp DATETIME,
       deletedAtTimestamp DATETIME
   );
-  `
+  `,
 ).run();
 
 db.query(
@@ -31,7 +31,7 @@ db.query(
         updatedAtTimestamp DATETIME,
         deletedAtTimestamp DATETIME 
     );
-  `
+  `,
 ).run();
 
 // Seed data
@@ -46,7 +46,7 @@ db.query(
     ('${billGatesId}', 'billgates@email.com', 'Bill', 'Gates'),
     ('${steveJobsId}', 'stevejobs@email.com', 'Steve', 'Jobs'),
     ('${johnCarmackId}', 'johncarmack@email.com', 'John', 'Carmack');
-  `
+  `,
 ).run();
 
 db.query(
@@ -56,5 +56,5 @@ db.query(
   ('${randomUUIDv7()}', '${billGatesId}', '${steveJobsId}'),
   ('${randomUUIDv7()}', '${steveJobsId}', '${johnCarmackId}'),
   ('${randomUUIDv7()}', '${johnCarmackId}', NULL);
-  `
+  `,
 ).run();

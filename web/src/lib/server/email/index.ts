@@ -17,5 +17,5 @@ export function getTransportOptions(): JSONTransport | JSONTransport.Options {
 }
 
 export const nodemailerTransport = nodemailer.createTransport(
-  getTransportOptions()
+  getTransportOptions(),
 );
