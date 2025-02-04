@@ -76,3 +76,18 @@
     @apply bg-background text-foreground;
   }
 }
+
+body {
+  height: 100dvh;
+  max-height: 100dvh;
+  width: 100dvw;
+  max-width: 100dvw;
+  overflow-x: hidden;
+  overflow-y: hidden;
+
+  font:
+    1rem/1.5 "Inter",
+    sans-serif;
+
+  color: white;
+}
