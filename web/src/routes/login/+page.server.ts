@@ -10,7 +10,7 @@ import type { RequestEvent } from "./$types";
 import { nodemailerTransport } from "$lib/server/email";
 import { superValidate } from "sveltekit-superforms";
 import { zod } from "sveltekit-superforms/adapters";
-import { formSchema } from "../register/form.schema";
+import { loginFormSchema } from "$lib/components/forms/form.schema";
 import { db } from "$lib/db";
 import { usersTable } from "$lib/db/schema";
 
@@ -18,8 +18,6 @@ export const load: PageServerLoad = async (event) => {
   const tokenSearchParam = event.url.searchParams.get("token");
 
   if (tokenSearchParam) {
-    console.log("Logging you in...");
-
     const { session, user } = await validateSessionToken(tokenSearchParam);
 
     if (session === null) {
@@ -29,19 +27,27 @@ export const load: PageServerLoad = async (event) => {
     setSessionTokenCookie(event, tokenSearchParam, session.expiresAt);
     redirect(302, "/in");
   }
+
+  return {
+    form: await superValidate(event, zod(loginFormSchema)),
+  };
 };
 
 export const actions = {
   default: async (event: RequestEvent) => {
-    const form = await superValidate(event, zod(formSchema));
+    const form = await superValidate(event, zod(loginFormSchema));
     if (!form.valid) {
       return fail(400, {
         form,
       });
     }
 
+    const user = (await db.insert(usersTable).values({ email: form.data.email }).returning({ id: usersTable.id}))[0];
     const token = generateSessionToken();
-    await createSession(token, form.data.email);
+
+    console.log("user", user);
+
+    await createSession(token, user.id);
 
     nodemailerTransport.sendMail(
       {
@@ -50,7 +56,7 @@ export const actions = {
         subject: "Message",
         text: `
             Here is your link to sign in:
-              http://localhost:5173/auth/login?token=${token} 
+              http://localhost:5173/login?token=${token} 
             `,
       },
       (err, info) => {
