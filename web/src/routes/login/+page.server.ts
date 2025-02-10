@@ -13,6 +13,7 @@ import { zod } from "sveltekit-superforms/adapters";
 import { loginFormSchema } from "$lib/components/forms/form.schema";
 import { db } from "$lib/db";
 import { usersTable } from "$lib/db/schema";
+import { eq } from "drizzle-orm";
 
 export const load: PageServerLoad = async (event) => {
   const tokenSearchParam = event.url.searchParams.get("token");
@@ -42,12 +43,26 @@ export const actions = {
       });
     }
 
-    const user = (await db.insert(usersTable).values({ email: form.data.email }).returning({ id: usersTable.id}))[0];
+    let userId = (
+      await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(eq(usersTable.email, form.data.email))
+    )[0]?.id;
+
+    if (userId === undefined) {
+      userId = (
+        await db
+          .insert(usersTable)
+          .values({ email: form.data.email })
+          .onConflictDoNothing({ target: usersTable.email })
+          .returning({ id: usersTable.id })
+      )[0].id;
+    }
+
     const token = generateSessionToken();
 
-    console.log("user", user);
-
-    await createSession(token, user.id);
+    await createSession(token, userId);
 
     nodemailerTransport.sendMail(
       {
