@@ -5,11 +5,26 @@
 </script>
 
 <h2>Main List</h2>
-{#each gifts as gift}
+{#each gifts as gift, index}
   <div>
     <h3>{gift.name}</h3>
     <p>{gift.description}</p>
     <p>{gift.createdAt}</p>
+    <button
+      onclick={async () => {
+        const res = await fetch("/wishlists", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ id: gift.id }),
+        });
+
+        gifts.splice(index, 1);
+      }}
+    >
+      ❌
+    </button>
   </div>
 {/each}
 <button
