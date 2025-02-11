@@ -12,7 +12,7 @@
     <p>{gift.createdAt}</p>
     <button
       onclick={async () => {
-        const res = await fetch("/wishlists", {
+        await fetch("/wishlists", {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
