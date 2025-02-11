@@ -1,20 +1,22 @@
 import type { InferSelectModel } from "drizzle-orm";
 import { pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
-import { time } from "drizzle-orm/singlestore-core";
 
 // Helpers
 const timestamps = {
-  updated_at: timestamp(),
-  created_at: timestamp().defaultNow().notNull(),
-  deleted_at: timestamp(),
+  updatedAt: timestamp(),
+  createdAt: timestamp().defaultNow().notNull(),
+  deletedAt: timestamp(),
 };
 
 // Schema
-export const gift = pgTable("gift", {
+export const giftsTable = pgTable("gifts", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: varchar({ length: 255 }).notNull(),
   link: text("link"),
   description: text("description"),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => usersTable.id),
   ...timestamps,
 });
 
@@ -33,7 +35,7 @@ export const sessionsTable = pgTable("sessions", {
 });
 
 export const schema = {
-  gift,
+  giftsTable,
   usersTable,
 };
 
