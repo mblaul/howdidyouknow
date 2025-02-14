@@ -4,7 +4,16 @@
   let gifts = $state(props.data.gifts);
 </script>
 
+<h1
+  class="text-4xl font-semibold tracking-tighter underline underline-offset-4"
+>
+  Your Wishlists
+</h1>
+
 <h2>Main List</h2>
+
+<a href="/wishlists/create">Create</a>
+
 {#each gifts as gift, index}
   <div>
     <h3>{gift.name}</h3>
@@ -27,16 +36,3 @@
     </button>
   </div>
 {/each}
-<button
-  onclick={async () => {
-    const res = await fetch("/wishlists", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    const data = await res.json();
-
-    gifts.unshift(data.gift);
-  }}>Add</button
->
