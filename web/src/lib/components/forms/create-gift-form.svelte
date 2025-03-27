@@ -1,7 +1,6 @@
 <script lang="ts">
   import * as Form from "$lib/components/ui/form";
   import { Input } from "$lib/components/ui/input";
-  import * as Alert from "$lib/components/ui/alert";
   import { fade } from "svelte/transition";
   import {
     createGiftFormSchema,
