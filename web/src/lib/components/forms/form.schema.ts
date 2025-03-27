@@ -13,3 +13,9 @@ export const createGiftFormSchema = z.object({
 });
 
 export type CreateGiftFormSchema = typeof createGiftFormSchema;
+
+export const shareWishlistFormSchema = z.object({
+  email: z.string().email(),
+});
+
+export type ShareWishlistFormSchema = typeof shareWishlistFormSchema;

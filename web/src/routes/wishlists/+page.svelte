@@ -12,14 +12,25 @@
 
 <h2 class="text-2xl font-medium tracking-tight">Main List</h2>
 
-<a
-  href="/wishlists/create"
-  class="shadow-md text-white bg-slate-400 border-4 border-slate-400 rounded-md w-max"
->
-  <div class="p-1 border-4 bg-slate-900 border-slate-900 rounded-sm">
-    Add to List ➡️
-  </div>
-</a>
+<div class="flex gap-2">
+  <a
+    href="/wishlists/create"
+    class="shadow-md text-white bg-slate-400 border-4 border-slate-400 rounded-md w-max"
+  >
+    <div class="p-1 border-4 bg-slate-900 border-slate-900 rounded-sm">
+      Add to List ➡️
+    </div>
+  </a>
+
+  <a
+    href="/wishlists/share"
+    class="shadow-md text-white bg-slate-400 border-4 border-slate-400 rounded-md w-max"
+  >
+    <div class="p-1 border-4 bg-slate-900 border-slate-900 rounded-sm">
+      Share 📲
+    </div>
+  </a>
+</div>
 
 {#each gifts as gift, index}
   <div
@@ -27,7 +38,13 @@
   >
     <div class="flex flex-col gap-1">
       <div class="flex justify-between">
-        <h3 class="text-xl">{gift.name} 🔗</h3>
+        <div class="flex">
+          <a
+            href={gift.link}
+            target="_blank"
+            class="text-xl underline underline-offset-4">{gift.name} 🔗</a
+          >
+        </div>
         <button
           onclick={async () => {
             await fetch("/wishlists", {
