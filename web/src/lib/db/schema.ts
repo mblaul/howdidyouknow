@@ -9,6 +9,15 @@ const timestamps = {
 };
 
 // Schema
+export const wishlistsTable = pgTable("wishlists", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar({ length: 255 }).notNull(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => usersTable.id),
+  ...timestamps,
+});
+
 export const giftsTable = pgTable("gifts", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: varchar({ length: 255 }).notNull(),
@@ -17,6 +26,9 @@ export const giftsTable = pgTable("gifts", {
   userId: uuid("user_id")
     .notNull()
     .references(() => usersTable.id),
+  wishlistId: uuid("wishlist_id")
+    .notNull()
+    .references(() => wishlistsTable.id),
   ...timestamps,
 });
 

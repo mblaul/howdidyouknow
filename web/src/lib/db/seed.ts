@@ -1,60 +1,64 @@
-import { Database } from "bun:sqlite";
-import { randomUUIDv7 } from "bun";
+import { db } from "./index";
+import { reset } from "drizzle-seed";
+import { usersTable, wishlistsTable } from "./schema";
+import * as schema from "./schema";
 
-const db = new Database("./src/db/dev-database.sqlite", { create: true });
+const seedUsers = [{ email: "seededUser@howdidyouknow.io" }];
+const seedWishlists = [
+  { name: "Seeded Wishlist 1" },
+  { name: "Seeded Wishlist 2" },
+];
 
-db.query("DROP TABLE IF EXISTS users;").run();
-db.query("DROP TABLE IF EXISTS gifts;").run();
+const seededGifts = [
+  {
+    name: "Seeded Gift 1",
+    link: "https://google.com",
+    description: "Seeded Gift 1 Description",
+  },
+  {
+    name: "Seeded Gift 2",
+    link: "https://google.com",
+    description: "Seeded Gift 2 Description",
+  },
+  {
+    name: "Seeded Gift 3",
+    link: "https://google.com",
+    description: "Seeded Gift 3 Description",
+  },
+];
 
-// Create tables
-db.query(
-  `
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY NOT NULL,
-      email TEXT NOT NULL UNIQUE,
-      firstName TEXT NOT NULL,
-      lastName TEXT NOT NULL,
-      createdAtTimestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updatedAtTimestamp DATETIME,
-      deletedAtTimestamp DATETIME
-  );
-  `,
-).run();
+async function main() {
+  await reset(db, schema);
 
-db.query(
-  `
-    CREATE TABLE IF NOT EXISTS gifts (
-        id TEXT PRIMARY KEY NOT NULL,
-        wantedByUserId TEXT NOT NULL,
-        purchasedByUserId TEXT,
-        createdAtTimestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updatedAtTimestamp DATETIME,
-        deletedAtTimestamp DATETIME 
-    );
-  `,
-).run();
+  const users = await db
+    .insert(usersTable)
+    .values(seedUsers)
+    .returning({ id: usersTable.id, email: usersTable.email })
+    .execute();
 
-// Seed data
-const billGatesId = "billgatesid";
-const steveJobsId = "stevejobsid";
-const johnCarmackId = "johncarmackid";
+  const seededUser = users[0];
 
-db.query(
-  `
-    INSERT INTO users (id, email, firstName, lastName)
-    VALUES
-    ('${billGatesId}', 'billgates@email.com', 'Bill', 'Gates'),
-    ('${steveJobsId}', 'stevejobs@email.com', 'Steve', 'Jobs'),
-    ('${johnCarmackId}', 'johncarmack@email.com', 'John', 'Carmack');
-  `,
-).run();
+  const wishlists = await db
+    .insert(wishlistsTable)
+    .values(
+      seedWishlists.map((wishlist) => ({ ...wishlist, userId: seededUser.id })),
+    )
+    .returning({ id: wishlistsTable.id, name: wishlistsTable.name })
+    .execute();
 
-db.query(
-  `
-  INSERT INTO gifts (id, wantedByUserId, purchasedByUserId)
-  VALUES
-  ('${randomUUIDv7()}', '${billGatesId}', '${steveJobsId}'),
-  ('${randomUUIDv7()}', '${steveJobsId}', '${johnCarmackId}'),
-  ('${randomUUIDv7()}', '${johnCarmackId}', NULL);
-  `,
-).run();
+  const seededWishlist = wishlists[0];
+
+  await db
+    .insert(schema.giftsTable)
+    .values(
+      seededGifts.map((gift) => ({
+        ...gift,
+        userId: seededUser.id,
+        wishlistId: seededWishlist.id,
+      })),
+    )
+    .returning({ id: schema.giftsTable.id, name: schema.giftsTable.name })
+    .execute();
+}
+
+main();
