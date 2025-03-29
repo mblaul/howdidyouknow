@@ -8,8 +8,7 @@ const seedWishlists = [
   { name: "Seeded Wishlist 1" },
   { name: "Seeded Wishlist 2" },
 ];
-
-const seededGifts = [
+const seedGifts = [
   {
     name: "Seeded Gift 1",
     link: "https://google.com",
@@ -51,7 +50,7 @@ async function main() {
   await db
     .insert(schema.giftsTable)
     .values(
-      seededGifts.map((gift) => ({
+      seedGifts.map((gift) => ({
         ...gift,
         userId: seededUser.id,
         wishlistId: seededWishlist.id,
