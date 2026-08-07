@@ -13,8 +13,8 @@ RUN cd /temp/dev && bun install --frozen-lockfile
 # copy node_modules from temp directory
 # then copy all (non-ignored) project files into the image
 FROM base AS prerelease
-COPY --from=install /temp/dev/node_modules node_modules
-COPY . .
+COPY --from=install --chown=bun:bun /temp/dev/node_modules node_modules
+COPY --chown=bun:bun . .
 
 # run the app
 USER bun

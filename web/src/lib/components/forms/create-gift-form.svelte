@@ -14,17 +14,30 @@
   import { zodClient } from "sveltekit-superforms/adapters";
   import { Textarea } from "../ui/textarea";
 
-  let data: SuperValidated<Infer<CreateGiftFormSchema>> = $props();
+  let {
+    data,
+    action = "",
+    onSuccess,
+  }: {
+    data: SuperValidated<Infer<CreateGiftFormSchema>>;
+    action?: string;
+    onSuccess?: () => void;
+  } = $props();
 
   const form = superForm(data, {
     dataType: "json",
     validators: zodClient(createGiftFormSchema),
+    onUpdated({ result }) {
+      if (result.type === "success" && onSuccess) {
+        onSuccess();
+      }
+    }
   });
 
   const { form: formData, enhance } = form;
 </script>
 
-<form class="flex flex-col gap-3" method="POST" action="" use:enhance>
+<form class="flex flex-col gap-3" method="POST" {action} use:enhance>
   <div class="flex flex-col gap-2" transition:fade={{ duration: 250 }}>
     <Form.Field {form} name="name">
       <Form.Control let:attrs>
@@ -44,6 +57,13 @@
       <Form.Control let:attrs>
         <Form.Label>Description</Form.Label>
         <Textarea {...attrs} bind:value={$formData.description} />
+      </Form.Control>
+      <Form.FieldErrors />
+    </Form.Field>
+    <Form.Field {form} name="position">
+      <Form.Control let:attrs>
+        <Form.Label>Position</Form.Label>
+        <Input type="number" {...attrs} bind:value={$formData.position} />
       </Form.Control>
       <Form.FieldErrors />
     </Form.Field>

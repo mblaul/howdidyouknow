@@ -1,70 +1,70 @@
 <script lang="ts">
   let props = $props();
-
-  let gifts = $state(props.data.gifts);
+  let wishlists = $state(props.data.wishlists);
 </script>
 
-<h1
-  class="shadow-md rounded border-1 text-white text-4xl font-medium tracking-tight underline underline-offset-4 bg-slate-950 p-3"
->
-  Your Wishlists
-</h1>
-
-<h2 class="text-2xl font-medium tracking-tight">Main List</h2>
-
-<div class="flex gap-2">
-  <a
-    href="/wishlists/create"
-    class="shadow-md text-white bg-slate-400 border-4 border-slate-400 rounded-md w-max"
-  >
-    <div class="p-1 border-4 bg-slate-900 border-slate-900 rounded-sm">
-      Add to List ➡️
+<div class="max-w-4xl mx-auto px-4 py-8 flex flex-col gap-8">
+  <div class="flex justify-between items-center border-b border-slate-200 pb-6">
+    <div>
+      <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">Your Wishlists</h1>
+      <p class="text-slate-500 mt-1">Manage and share your holiday and birthday wishlists.</p>
     </div>
-  </a>
-
-  <a
-    href="/wishlists/share"
-    class="shadow-md text-white bg-slate-400 border-4 border-slate-400 rounded-md w-max"
-  >
-    <div class="p-1 border-4 bg-slate-900 border-slate-900 rounded-sm">
-      Share 📲
-    </div>
-  </a>
-</div>
-
-{#each gifts as gift, index}
-  <div
-    class="flex flex-col gap-4 p-3 border-2 border-slate-400 rounded-md shadow-lg"
-  >
-    <div class="flex flex-col gap-1">
-      <div class="flex justify-between">
-        <div class="flex">
-          <a
-            href={gift.link}
-            target="_blank"
-            class="text-xl underline underline-offset-4">{gift.name} 🔗</a
-          >
-        </div>
-        <button
-          onclick={async () => {
-            await fetch("/wishlists", {
-              method: "DELETE",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ id: gift.id }),
-            });
-
-            gifts.splice(index, 1);
-          }}
-        >
-          ❌
-        </button>
-      </div>
-      <p class="text-sm text-slate-600">
-        {(gift.createdAt as Date).toLocaleDateString()}
-      </p>
-    </div>
-    <p class="text-base">{gift.description}</p>
+    <a
+      href="/wishlists/new"
+      class="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-indigo-500 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg hover:from-indigo-600 hover:to-violet-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 transition-all duration-200 hover:scale-[1.02]"
+    >
+      Create New List ➕
+    </a>
   </div>
-{/each}
+
+  {#if wishlists.length === 0}
+    <div class="flex flex-col items-center justify-center p-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-center gap-4">
+      <div class="text-5xl">🎁</div>
+      <div class="flex flex-col gap-1">
+        <h3 class="text-lg font-bold text-slate-900">No wishlists yet</h3>
+        <p class="text-sm text-slate-500 max-w-sm">Create your first wishlist and start adding items you'd love to receive!</p>
+      </div>
+      <a
+        href="/wishlists/new"
+        class="rounded-md bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50"
+      >
+        Get Started
+      </a>
+    </div>
+  {:else}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {#each wishlists as wishlist, index}
+        <div class="relative group rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 hover:shadow-md hover:ring-indigo-500/50 transition-all duration-200 flex flex-col justify-between gap-4">
+          <div class="flex flex-col gap-2">
+            <div class="flex justify-between items-start gap-4">
+              <a href="/wishlists/{wishlist.id}" class="text-xl font-bold text-slate-900 hover:text-indigo-600 transition-colors">
+                {wishlist.name}
+              </a>
+              <button
+                type="button"
+                class="text-slate-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-slate-50"
+                onclick={async () => {
+                  if (confirm("Are you sure you want to delete this wishlist and all its items?")) {
+                    await fetch(`/wishlists/${wishlist.id}`, { method: "DELETE" });
+                    wishlists.splice(index, 1);
+                  }
+                }}
+              >
+                🗑️
+              </button>
+            </div>
+            <p class="text-xs text-slate-400">Created on {new Date(wishlist.createdAt).toLocaleDateString()}</p>
+          </div>
+          <div class="flex justify-between items-center pt-4 border-t border-slate-100">
+            <a href="/wishlists/{wishlist.id}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-500 flex items-center gap-1">
+              View Items ➡️
+            </a>
+            <a href="/wishlists/share?id={wishlist.id}" class="text-sm text-slate-500 hover:text-slate-800 flex items-center gap-1">
+              Share 📲
+            </a>
+          </div>
+        </div>
+      {/each}
+    </div>
+  {/if}
+</div>

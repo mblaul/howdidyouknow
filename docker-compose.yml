@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   postgres:
-    image: postgres:latest
+    image: postgres:16-alpine
     container_name: postgres
     environment:
       POSTGRES_USER: postgres
@@ -23,8 +23,11 @@ services:
       - "5173:5173"
     depends_on:
       - postgres
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/db
     volumes:
       - ./web:/usr/src/app
+      - /usr/src/app/node_modules
 
 volumes:
   postgres-data:

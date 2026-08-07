@@ -1,17 +1,17 @@
 import { db } from "$lib/db";
-import { giftsTable } from "$lib/db/schema";
-import { and, eq, is, isNull } from "drizzle-orm";
+import { wishlistsTable } from "$lib/db/schema";
+import { and, eq, isNull } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async (event) => {
   return {
-    gifts: await db
+    wishlists: await db
       .select()
-      .from(giftsTable)
+      .from(wishlistsTable)
       .where(
         and(
-          isNull(giftsTable.deletedAt),
-          eq(giftsTable.userId, event.locals.user.id),
+          isNull(wishlistsTable.deletedAt),
+          eq(wishlistsTable.userId, event.locals.user.id),
         ),
       )
       .execute(),
