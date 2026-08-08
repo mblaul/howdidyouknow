@@ -9,29 +9,61 @@ import { fail, type Actions } from "@sveltejs/kit";
 import { superValidate } from "sveltekit-superforms";
 import { zod } from "sveltekit-superforms/adapters";
 
+import { wishlistSharesTable } from "$lib/db/schema";
+
 export const load: PageServerLoad = async (event) => {
   const wishlistId = event.params.id;
   const userId = event.locals.user?.id;
+  const token = event.url.searchParams.get("token");
 
-  if (!userId) {
+  if (!userId && !token) {
     throw error(401, "Unauthorized");
+  }
+
+  let hasAccess = false;
+
+  if (userId) {
+    const ownerList = await db
+      .select()
+      .from(wishlistsTable)
+      .where(
+        and(
+          eq(wishlistsTable.id, wishlistId),
+          eq(wishlistsTable.userId, userId),
+          isNull(wishlistsTable.deletedAt)
+        )
+      )
+      .execute();
+    if (ownerList.length > 0) {
+      hasAccess = true;
+    }
+  }
+
+  if (!hasAccess && token) {
+    const shareRecord = await db
+      .select()
+      .from(wishlistSharesTable)
+      .where(
+        and(
+          eq(wishlistSharesTable.token, token),
+          eq(wishlistSharesTable.wishlistId, wishlistId)
+        )
+      )
+      .execute();
+    if (shareRecord.length > 0) {
+      hasAccess = true;
+    }
+  }
+
+  if (!hasAccess) {
+    throw error(404, "Wishlist not found or access denied");
   }
 
   const wishlists = await db
     .select()
     .from(wishlistsTable)
-    .where(
-      and(
-        eq(wishlistsTable.id, wishlistId),
-        eq(wishlistsTable.userId, userId),
-        isNull(wishlistsTable.deletedAt)
-      )
-    )
+    .where(and(eq(wishlistsTable.id, wishlistId), isNull(wishlistsTable.deletedAt)))
     .execute();
-
-  if (wishlists.length === 0) {
-    throw error(404, "Wishlist not found");
-  }
 
   const gifts = await db
     .select()

@@ -34,7 +34,8 @@ export const createWishlistFormSchema = z.object({
 export type CreateWishlistFormSchema = typeof createWishlistFormSchema;
 
 export const shareWishlistFormSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email("Valid email required"),
+  wishlistId: z.string().uuid("Invalid wishlist ID"),
 });
 
 export type ShareWishlistFormSchema = typeof shareWishlistFormSchema;

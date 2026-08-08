@@ -26,7 +26,7 @@ export const load: PageServerLoad = async (event) => {
     }
 
     setSessionTokenCookie(event, tokenSearchParam, session.expiresAt);
-    redirect(302, "/in");
+    redirect(302, "/wishlists");
   }
 
   return {
@@ -66,18 +66,13 @@ export const actions = {
 
     nodemailerTransport.sendMail(
       {
-        from: "sender@example.com",
-        to: "recipient@example.com",
-        subject: "Message",
-        text: `
-            Here is your link to sign in:
-              http://localhost:5173/login?token=${token} 
-            `,
+        from: "noreply@howdidyouknow.app",
+        to: form.data.email,
+        subject: "Your Login Link",
+        text: `Here is your link to sign in: ${event.url.origin}/login?token=${token}`,
       },
       (err, info) => {
-        console.log(info.envelope);
-        console.log(info.messageId);
-        console.log(info.message);
+        if (err) console.error("Email send error:", err);
       },
     );
 

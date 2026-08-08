@@ -79,10 +79,12 @@ export function setSessionTokenCookie(
   token: string,
   expiresAt: Date,
 ): void {
+  const maxAge = Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
   event.cookies.set("session", token, {
     httpOnly: true,
     sameSite: "lax",
     expires: expiresAt,
+    maxAge,
     path: "/",
   });
 }

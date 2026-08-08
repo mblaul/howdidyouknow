@@ -47,12 +47,28 @@ export const sessionsTable = pgTable("sessions", {
   expiresAt: timestamp("expires_at").notNull(),
 });
 
+export const wishlistSharesTable = pgTable("wishlist_shares", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  token: varchar("token", { length: 255 }).notNull().unique(),
+  wishlistId: uuid("wishlist_id")
+    .notNull()
+    .references(() => wishlistsTable.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "cascade" }),
+  role: varchar("role", { length: 20 }).default("viewer").notNull(),
+  expiresAt: timestamp("expires_at"),
+  ...timestamps,
+});
+
 export const schema = {
   wishlistsTable,
   giftsTable,
   usersTable,
   sessionsTable,
+  wishlistSharesTable,
 };
 
 export type User = InferSelectModel<typeof usersTable>;
 export type Session = InferSelectModel<typeof sessionsTable>;
+export type WishlistShare = InferSelectModel<typeof wishlistSharesTable>;
