@@ -7,10 +7,13 @@
   let {
     isOpen = $bindable(false),
     formData,
+    action = "",
   }: {
     isOpen: boolean;
     formData: SuperValidated<Infer<CreateGiftFormSchema>>;
+    action?: string;
   } = $props();
+
 
   function close() {
     isOpen = false;
@@ -45,7 +48,7 @@
 
       <CreateGiftForm
         data={formData}
-        action="?/addGift"
+        {action}
         onSuccess={() => {
           isOpen = false;
           invalidateAll();

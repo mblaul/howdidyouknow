@@ -1,6 +1,7 @@
 import { createGiftFormSchema } from "$lib/components/forms/form.schema";
 import { db } from "$lib/db";
 import { giftsTable } from "$lib/db/schema";
+import { and, eq, isNull, max } from "drizzle-orm";
 import { fail, redirect, type Actions } from "@sveltejs/kit";
 import { superValidate } from "sveltekit-superforms";
 import { zod } from "sveltekit-superforms/adapters";
@@ -22,13 +23,27 @@ export const actions = {
       return fail(400, { form });
     }
 
+    const result = await db
+      .select({ maxPos: max(giftsTable.position) })
+      .from(giftsTable)
+      .where(
+        and(
+          eq(giftsTable.wishlistId, wishlistId),
+          isNull(giftsTable.deletedAt)
+        )
+      )
+      .execute();
+
+    const maxPosition = result[0]?.maxPos ?? -1;
+    const newPosition = maxPosition + 1;
+
     await db
       .insert(giftsTable)
       .values({
         name: form.data.name,
         link: form.data.link || null,
         description: form.data.description || null,
-        position: form.data.position,
+        position: newPosition,
         wishlistId,
         userId: event.locals.user.id,
       })

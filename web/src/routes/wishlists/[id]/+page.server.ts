@@ -1,7 +1,7 @@
 import { db } from "$lib/db";
 import { wishlistsTable, giftsTable } from "$lib/db/schema";
 import { error } from "@sveltejs/kit";
-import { and, eq, isNull, asc } from "drizzle-orm";
+import { and, eq, isNull, asc, max } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 
 import { createGiftFormSchema } from "$lib/components/forms/form.schema";
@@ -54,35 +54,54 @@ export const load: PageServerLoad = async (event) => {
   };
 };
 
-export const actions: Actions = {
-  addGift: async (event) => {
-    const wishlistId = event.params.id;
-    const userId = event.locals.user?.id;
+const addGiftHandler = async (event: any) => {
+  const wishlistId = event.params.id;
+  const userId = event.locals.user?.id;
 
-    if (!userId) {
-      throw error(401, "Unauthorized");
-    }
-
-    const form = await superValidate(event, zod(createGiftFormSchema));
-
-    if (!form.valid) {
-      return fail(400, { form });
-    }
-
-    await db
-      .insert(giftsTable)
-      .values({
-        name: form.data.name,
-        link: form.data.link || null,
-        description: form.data.description || null,
-        position: form.data.position,
-        wishlistId,
-        userId,
-      })
-      .returning()
-      .execute();
-
-    return { form };
+  if (!userId) {
+    throw error(401, "Unauthorized");
   }
+
+  const form = await superValidate(event, zod(createGiftFormSchema));
+
+  if (!form.valid) {
+    return fail(400, { form });
+  }
+
+  // Query max position directly using SQL aggregate
+  const result = await db
+    .select({ maxPos: max(giftsTable.position) })
+    .from(giftsTable)
+    .where(
+      and(
+        eq(giftsTable.wishlistId, wishlistId),
+        isNull(giftsTable.deletedAt)
+      )
+    )
+    .execute();
+
+  const maxPosition = result[0]?.maxPos ?? -1;
+  const newPosition = maxPosition + 1;
+
+  await db
+    .insert(giftsTable)
+    .values({
+      name: form.data.name,
+      link: form.data.link || null,
+      description: form.data.description || null,
+      position: newPosition,
+      wishlistId,
+      userId,
+    })
+    .returning()
+    .execute();
+
+  return { form };
 };
+
+export const actions: Actions = {
+  default: addGiftHandler,
+};
+
+
 

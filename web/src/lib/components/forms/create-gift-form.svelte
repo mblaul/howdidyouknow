@@ -27,7 +27,12 @@
   const form = superForm(data, {
     dataType: "json",
     validators: zodClient(createGiftFormSchema),
-    onUpdated({ result }) {
+    onResult({ result }) {
+      if ((result.type === "success" || result.type === "redirect") && onSuccess) {
+        onSuccess();
+      }
+    },
+    onUpdate({ result }) {
       if (result.type === "success" && onSuccess) {
         onSuccess();
       }
@@ -57,13 +62,6 @@
       <Form.Control let:attrs>
         <Form.Label>Description</Form.Label>
         <Textarea {...attrs} bind:value={$formData.description} />
-      </Form.Control>
-      <Form.FieldErrors />
-    </Form.Field>
-    <Form.Field {form} name="position">
-      <Form.Control let:attrs>
-        <Form.Label>Position</Form.Label>
-        <Input type="number" {...attrs} bind:value={$formData.position} />
       </Form.Control>
       <Form.FieldErrors />
     </Form.Field>

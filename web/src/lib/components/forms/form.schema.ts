@@ -8,9 +8,21 @@ export type LoginFormSchema = typeof loginFormSchema;
 
 export const createGiftFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  link: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  link: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .transform((val) => {
+      if (!val) return val;
+      const trimmed = val.trim();
+      if (!trimmed) return trimmed;
+      if (!/^https?:\/\//i.test(trimmed)) {
+        return `https://${trimmed}`;
+      }
+      return trimmed;
+    })
+    .pipe(z.string().url("Must be a valid URL").optional().or(z.literal(""))),
   description: z.string().optional(),
-  position: z.number().int().default(0),
 });
 
 export type CreateGiftFormSchema = typeof createGiftFormSchema;
