@@ -71,4 +71,5 @@ export const schema = {
 
 export type User = InferSelectModel<typeof usersTable>;
 export type Session = InferSelectModel<typeof sessionsTable>;
+export type Wishlist = InferSelectModel<typeof wishlistsTable>;
 export type WishlistShare = InferSelectModel<typeof wishlistSharesTable>;
