@@ -1,5 +1,7 @@
 <script lang="ts">
   import AddItemModal from "$lib/components/wishlist/add-item-modal.svelte";
+  import ShareWishlistModal from "$lib/components/wishlist/share-wishlist-modal.svelte";
+  import Toast from "$lib/components/common/toast.svelte";
 
   let props = $props();
   let wishlist = $state(props.data.wishlist);
@@ -12,10 +14,19 @@
   });
 
   let isModalOpen = $state(false);
+  let isShareModalOpen = $state(false);
+  let showToast = $state(false);
+  let toastMessage = $state("");
+
   let editingGiftId = $state<string | null>(null);
   let editFields = $state<Record<string, { name: string; link: string; description: string }>>({});
   let draggedIndex = $state<number | null>(null);
   let dragOverIndex = $state<number | null>(null);
+
+  function handleShareSuccess() {
+    toastMessage = "Wishlist shared successfully";
+    showToast = true;
+  }
 
   function startEditing(gift: any) {
     editingGiftId = gift.id;
@@ -51,7 +62,7 @@
     });
 
     if (res.ok) {
-      const gift = gifts.find(g => g.id === giftId);
+      const gift = gifts.find((g: any) => g.id === giftId);
       if (gift) {
         gift.name = dataToSave.name;
         gift.link = linkToSave;
@@ -62,9 +73,9 @@
   }
 
   async function persistOrder(updatedGifts: any[]) {
-    gifts = updatedGifts.map((g, idx) => ({ ...g, position: idx }));
+    gifts = updatedGifts.map((g: any, idx: number) => ({ ...g, position: idx }));
     await Promise.all(
-      gifts.map(g =>
+      gifts.map((g: any) =>
         fetch("/wishlists", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -140,7 +151,7 @@
 <div class="max-w-4xl w-full mx-auto px-4 py-8 flex flex-col gap-8">
   <div class="flex items-center gap-2">
     <a href="/wishlists" class="text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors">
-      ← Back to Wishlists
+      Back to Wishlists
     </a>
   </div>
 
@@ -149,20 +160,33 @@
       <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">{wishlist.name}</h1>
       <p class="text-slate-500 mt-1">Items in this wishlist, ordered by preference.</p>
     </div>
-    <button
-      type="button"
-      onclick={() => (isModalOpen = true)}
-      class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-indigo-700 transition-colors"
-    >
-      Add Item
-    </button>
+    {#if props.data.isOwner}
+      <div class="flex items-center gap-3">
+        <button
+          type="button"
+          onclick={() => (isShareModalOpen = true)}
+          class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
+        >
+          Share
+        </button>
+        <button
+          type="button"
+          onclick={() => (isModalOpen = true)}
+          class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-indigo-700 transition-colors"
+        >
+          Add Item
+        </button>
+      </div>
+    {/if}
   </div>
 
   {#if gifts.length === 0}
     <div class="flex flex-col items-center justify-center p-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-center gap-4">
       <div class="flex flex-col gap-1">
         <h3 class="text-lg font-bold text-slate-900">This list is empty</h3>
-        <p class="text-sm text-slate-500 max-w-sm">Start adding items to your wishlist using the "Add Item" button above.</p>
+        <p class="text-sm text-slate-500 max-w-sm">
+          {props.data.isOwner ? 'Start adding items to your wishlist using the "Add Item" button above.' : "No items have been added to this wishlist yet."}
+        </p>
       </div>
     </div>
   {:else}
@@ -172,51 +196,52 @@
         {@const isDragging = draggedIndex === index}
         {@const isTarget = dragOverIndex === index}
         <div
-          draggable={!isEditing}
-          ondragstart={(e) => handleDragStart(e, index)}
-          ondragover={(e) => handleDragOver(e, index)}
-          ondragleave={() => handleDragLeave(index)}
-          ondrop={(e) => handleDrop(e, index)}
-          ondragend={handleDragEnd}
+          draggable={props.data.isOwner && !isEditing}
+          ondragstart={(e) => props.data.isOwner && handleDragStart(e, index)}
+          ondragover={(e) => props.data.isOwner && handleDragOver(e, index)}
+          ondragleave={() => props.data.isOwner && handleDragLeave(index)}
+          ondrop={(e) => props.data.isOwner && handleDrop(e, index)}
+          ondragend={() => props.data.isOwner && handleDragEnd()}
           class="w-full flex items-start gap-4 p-6 rounded-2xl border transition-all duration-200 {isDragging ? 'opacity-40 border-dashed border-indigo-400 bg-white' : isTarget ? 'border-indigo-500 ring-2 ring-indigo-200 bg-indigo-50/20' : isEditing ? 'bg-white border-indigo-400 ring-2 ring-indigo-200/50 shadow-sm' : 'bg-white border-slate-200 shadow-sm hover:shadow-md'}"
         >
-          <!-- Position text bubble badge containing drag handle + position + stacked up/down arrows -->
           <div class="flex items-center gap-2 bg-slate-100/80 border border-slate-200/80 rounded-2xl px-3 py-1.5 shadow-xs shrink-0 select-none mt-1">
-            <!-- Grid icon drag handle inside bubble -->
-            <div
-              class="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 transition-colors"
-              title="Drag to reorder"
-            >
-              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M7 4a1 1 0 100-2 1 1 0 000 2zm0 7a1 1 0 100-2 1 1 0 000 2zm0 7a1 1 0 100-2 1 1 0 000 2zm6-14a1 1 0 100-2 1 1 0 000 2zm0 7a1 1 0 100-2 1 1 0 000 2zm0 7a1 1 0 100-2 1 1 0 000 2z" />
-              </svg>
-            </div>
+            {#if props.data.isOwner}
+              <div
+                class="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 transition-colors"
+                title="Drag to reorder"
+              >
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M7 4a1 1 0 100-2 1 1 0 000 2zm0 7a1 1 0 100-2 1 1 0 000 2zm0 7a1 1 0 100-2 1 1 0 000 2zm6-14a1 1 0 100-2 1 1 0 000 2zm0 7a1 1 0 100-2 1 1 0 000 2zm0 7a1 1 0 100-2 1 1 0 000 2z" />
+                </svg>
+              </div>
+            {/if}
 
             <span class="text-sm font-bold text-slate-800">#{index + 1}</span>
 
-            <div class="flex flex-col justify-center gap-0.5 leading-none">
-              <button
-                type="button"
-                class="text-[10px] text-slate-400 hover:text-indigo-600 transition-colors disabled:opacity-30 p-0"
-                disabled={index === 0 || isEditing}
-                onclick={() => moveItem(index, "up")}
-                title="Move up"
-              >
-                ▲
-              </button>
-              <button
-                type="button"
-                class="text-[10px] text-slate-400 hover:text-indigo-600 transition-colors disabled:opacity-30 p-0"
-                disabled={index === gifts.length - 1 || isEditing}
-                onclick={() => moveItem(index, "down")}
-                title="Move down"
-              >
-                ▼
-              </button>
-            </div>
+            {#if props.data.isOwner}
+              <div class="flex flex-col justify-center gap-0.5 leading-none">
+                <button
+                  type="button"
+                  class="text-[10px] text-slate-400 hover:text-indigo-600 transition-colors disabled:opacity-30 p-0"
+                  disabled={index === 0 || isEditing}
+                  onclick={() => moveItem(index, "up")}
+                  title="Move up"
+                >
+                  Up
+                </button>
+                <button
+                  type="button"
+                  class="text-[10px] text-slate-400 hover:text-indigo-600 transition-colors disabled:opacity-30 p-0"
+                  disabled={index === gifts.length - 1 || isEditing}
+                  onclick={() => moveItem(index, "down")}
+                  title="Move down"
+                >
+                  Down
+                </button>
+              </div>
+            {/if}
           </div>
 
-          <!-- Item Details Form/Display -->
           <form
             onsubmit={(e) => {
               e.preventDefault();
@@ -251,50 +276,50 @@
                       rel="noopener noreferrer"
                       class="text-sm text-indigo-600 hover:text-indigo-800 hover:underline transition-colors truncate block"
                     >
-                      {gift.link} ↗
+                      {gift.link}
                     </a>
                   {/if}
                 {/if}
               </div>
 
-              <!-- Actions -->
-              <div class="flex items-center gap-2 shrink-0">
-                {#if isEditing}
-                  <button
-                    type="submit"
-                    class="text-sm font-semibold px-4 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs"
-                  >
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    onclick={cancelEditing}
-                    class="text-sm font-semibold px-4 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                {:else}
-                  <button
-                    type="button"
-                    title="Edit item"
-                    class="text-sm font-semibold text-slate-700 hover:text-indigo-600 transition-colors px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 shadow-xs"
-                    onclick={() => startEditing(gift)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    title="Delete item"
-                    class="text-sm font-semibold text-slate-500 hover:text-red-600 transition-colors px-2 py-1.5 rounded-lg hover:bg-red-50 border border-transparent"
-                    onclick={() => deleteGift(gift.id, index)}
-                  >
-                    Delete
-                  </button>
-                {/if}
-              </div>
+              {#if props.data.isOwner}
+                <div class="flex items-center gap-2 shrink-0">
+                  {#if isEditing}
+                    <button
+                      type="submit"
+                      class="text-sm font-semibold px-4 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onclick={cancelEditing}
+                      class="text-sm font-semibold px-4 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  {:else}
+                    <button
+                      type="button"
+                      title="Edit item"
+                      class="text-sm font-semibold text-slate-700 hover:text-indigo-600 transition-colors px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 shadow-xs"
+                      onclick={() => startEditing(gift)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      title="Delete item"
+                      class="text-sm font-semibold text-slate-500 hover:text-red-600 transition-colors px-2 py-1.5 rounded-lg hover:bg-red-50 border border-transparent"
+                      onclick={() => deleteGift(gift.id, index)}
+                    >
+                      Delete
+                    </button>
+                  {/if}
+                </div>
+              {/if}
             </div>
 
-            <!-- Description Field -->
             {#if isEditing}
               <textarea
                 bind:value={editFields[gift.id].description}
@@ -319,3 +344,12 @@
   {formData}
   action="/wishlists/{wishlist.id}"
 />
+
+<ShareWishlistModal
+  bind:isOpen={isShareModalOpen}
+  wishlistId={wishlist.id}
+  wishlistName={wishlist.name}
+  onSuccess={handleShareSuccess}
+/>
+
+<Toast message={toastMessage} bind:show={showToast} />

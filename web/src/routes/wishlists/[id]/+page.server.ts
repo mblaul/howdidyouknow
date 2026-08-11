@@ -5,6 +5,7 @@ import { and, eq, isNull, asc, max } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 
 import { createGiftFormSchema } from "$lib/components/forms/form.schema";
+import { createSession, generateSessionToken, setSessionTokenCookie } from "$lib/server/auth";
 import { fail, type Actions } from "@sveltejs/kit";
 import { superValidate } from "sveltekit-superforms";
 import { zod } from "sveltekit-superforms/adapters";
@@ -52,6 +53,11 @@ export const load: PageServerLoad = async (event) => {
       .execute();
     if (shareRecord.length > 0) {
       hasAccess = true;
+      if (!userId && shareRecord[0].userId) {
+        const sessionToken = generateSessionToken();
+        const session = await createSession(sessionToken, shareRecord[0].userId);
+        setSessionTokenCookie(event, sessionToken, session.expiresAt);
+      }
     }
   }
 
@@ -79,10 +85,15 @@ export const load: PageServerLoad = async (event) => {
 
   const form = await superValidate(zod(createGiftFormSchema));
 
+  const wishlist = wishlists[0];
+  const currentUserId = event.locals.user?.id;
+  const isOwner = Boolean(currentUserId && wishlist.userId === currentUserId);
+
   return {
-    wishlist: wishlists[0],
+    wishlist,
     gifts,
     form,
+    isOwner,
   };
 };
 

@@ -62,7 +62,7 @@
     </Form.Field>
 
     <Form.Button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg transition-colors">
-      Generate Access Token & Share 🔗
+      Share
     </Form.Button>
   </div>
 </form>

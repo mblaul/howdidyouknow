@@ -9,7 +9,7 @@
     >howdidyouknow</a
   >
   <nav class="flex gap-4">
-    {#if page.data.sessionId}
+    {#if page.data.user || page.data.sessionId}
       <a href="/wishlists" class="hover:underline">Wishlists</a>
       <a href="/logout" class="hover:underline">Logout</a>
     {:else}

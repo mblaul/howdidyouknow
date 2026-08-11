@@ -8,13 +8,13 @@
   <div class="flex flex-col p-8 border border-slate-200 bg-white rounded-2xl shadow-sm min-w-full gap-6">
     <div class="flex flex-col gap-1">
       <h2 class="text-2xl font-bold text-slate-900">Share Wishlist</h2>
-      <p class="text-sm text-slate-500">Generate a unique access token link for a recipient.</p>
+      <p class="text-sm text-slate-500">Share your wishlist with a recipient.</p>
     </div>
 
     {#if form?.success && form?.shareUrl}
       <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex flex-col gap-3">
         <div class="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
-          <span>✅</span> Access token created and email queued!
+          Wishlist shared and email sent!
         </div>
         <div class="flex flex-col gap-1">
           <span class="text-xs font-medium text-slate-600">Share Link:</span>

@@ -64,17 +64,22 @@ export const actions = {
 
     await createSession(token, userId);
 
-    nodemailerTransport.sendMail(
-      {
+    const loginUrl = `${event.url.origin}/login?token=${token}`;
+    console.log(`\n========================================`);
+    console.log(`📨 LOGIN LINK: ${loginUrl}`);
+    console.log(`========================================\n`);
+
+    try {
+      const info = await nodemailerTransport.sendMail({
         from: "noreply@howdidyouknow.app",
         to: form.data.email,
         subject: "Your Login Link",
-        text: `Here is your link to sign in: ${event.url.origin}/login?token=${token}`,
-      },
-      (err, info) => {
-        if (err) console.error("Email send error:", err);
-      },
-    );
+        text: `Here is your link to sign in: ${loginUrl}`,
+      });
+      console.log("Nodemailer info:", info.message);
+    } catch (err) {
+      console.error("Email send error:", err);
+    }
 
     return {
       form,
