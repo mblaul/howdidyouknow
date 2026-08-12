@@ -1,5 +1,5 @@
 import type { InferSelectModel } from "drizzle-orm";
-import { integer, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { integer, pgTable, text, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 
 // Helpers
 const timestamps = {
@@ -47,19 +47,28 @@ export const sessionsTable = pgTable("sessions", {
   expiresAt: timestamp("expires_at").notNull(),
 });
 
-export const wishlistSharesTable = pgTable("wishlist_shares", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  token: varchar("token", { length: 255 }).notNull().unique(),
-  wishlistId: uuid("wishlist_id")
-    .notNull()
-    .references(() => wishlistsTable.id, { onDelete: "cascade" }),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => usersTable.id, { onDelete: "cascade" }),
-  role: varchar("role", { length: 20 }).default("viewer").notNull(),
-  expiresAt: timestamp("expires_at"),
-  ...timestamps,
-});
+export const wishlistSharesTable = pgTable(
+  "wishlist_shares",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    token: varchar("token", { length: 255 }).notNull().unique(),
+    wishlistId: uuid("wishlist_id")
+      .notNull()
+      .references(() => wishlistsTable.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    role: varchar("role", { length: 20 }).default("viewer").notNull(),
+    expiresAt: timestamp("expires_at"),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("wishlist_shares_wishlist_id_user_id_idx").on(
+      table.wishlistId,
+      table.userId
+    ),
+  ]
+);
 
 export const schema = {
   wishlistsTable,

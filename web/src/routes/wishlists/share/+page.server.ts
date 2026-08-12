@@ -82,14 +82,25 @@ export const actions = {
       targetUser = newUser;
     }
 
-    // 3. Generate access token & insert share
+    // 3. Generate access token & insert/upsert share
     const token = crypto.randomUUID();
-    await db.insert(wishlistSharesTable).values({
-      token,
-      wishlistId,
-      userId: targetUser.id,
-      role: "viewer",
-    }).execute();
+    await db
+      .insert(wishlistSharesTable)
+      .values({
+        token,
+        wishlistId,
+        userId: targetUser.id,
+        role: "viewer",
+      })
+      .onConflictDoUpdate({
+        target: [wishlistSharesTable.wishlistId, wishlistSharesTable.userId],
+        set: {
+          token,
+          role: "viewer",
+          updatedAt: new Date(),
+        },
+      })
+      .execute();
 
     // 4. Construct share URL
     const shareUrl = `${event.url.origin}/wishlists/${wishlistId}?token=${token}`;

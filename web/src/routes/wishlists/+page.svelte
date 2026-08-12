@@ -4,6 +4,7 @@
 
   let props = $props();
   let wishlists = $state(props.data.wishlists);
+  let sharedWishlists = $state(props.data.sharedWishlists);
 
   let shareModalOpen = $state(false);
   let selectedWishlist = $state<{ id: string; name: string } | null>(null);
@@ -86,6 +87,35 @@
           </div>
         </div>
       {/each}
+    </div>
+  {/if}
+
+  {#if sharedWishlists && sharedWishlists.length > 0}
+    <div class="border-t border-slate-200 pt-8 mt-4">
+      <div class="mb-6">
+        <h2 class="text-2xl font-bold text-slate-900 tracking-tight">Shared with Me</h2>
+        <p class="text-slate-500 text-sm mt-1">Wishlists other people have shared with you.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {#each sharedWishlists as wishlist}
+          <div class="relative group rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 hover:shadow-md hover:ring-indigo-500/50 transition-all duration-200 flex flex-col justify-between gap-4">
+            <div class="flex flex-col gap-2">
+              <div class="flex justify-between items-start gap-4">
+                <a href="/wishlists/{wishlist.id}?token={wishlist.shareToken}" class="text-xl font-bold text-slate-900 hover:text-indigo-600 transition-colors">
+                  {wishlist.name}
+                </a>
+              </div>
+              <p class="text-xs text-slate-400">Shared with you</p>
+            </div>
+            <div class="flex justify-between items-center pt-4 border-t border-slate-100">
+              <a href="/wishlists/{wishlist.id}?token={wishlist.shareToken}" class="text-sm font-semibold text-indigo-600 hover:text-indigo-500 flex items-center gap-1">
+                View Items
+              </a>
+            </div>
+          </div>
+        {/each}
+      </div>
     </div>
   {/if}
 </div>

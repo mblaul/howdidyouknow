@@ -10,7 +10,7 @@ import { fail, type Actions } from "@sveltejs/kit";
 import { superValidate } from "sveltekit-superforms";
 import { zod } from "sveltekit-superforms/adapters";
 
-import { wishlistSharesTable } from "$lib/db/schema";
+import { wishlistSharesTable, usersTable } from "$lib/db/schema";
 
 export const load: PageServerLoad = async (event) => {
   const wishlistId = event.params.id;
@@ -57,6 +57,17 @@ export const load: PageServerLoad = async (event) => {
         const sessionToken = generateSessionToken();
         const session = await createSession(sessionToken, shareRecord[0].userId);
         setSessionTokenCookie(event, sessionToken, session.expiresAt);
+
+        // Update event.locals so layout data inherits the logged in user
+        const userRes = await db
+          .select()
+          .from(usersTable)
+          .where(eq(usersTable.id, shareRecord[0].userId))
+          .execute();
+        if (userRes.length > 0) {
+          event.locals.user = userRes[0];
+          event.locals.session = session;
+        }
       }
     }
   }
@@ -94,6 +105,7 @@ export const load: PageServerLoad = async (event) => {
     gifts,
     form,
     isOwner,
+    user: event.locals.user,
   };
 };
 
