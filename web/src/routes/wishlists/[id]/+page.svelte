@@ -24,6 +24,46 @@
   let draggedIndex = $state<number | null>(null);
   let dragOverIndex = $state<number | null>(null);
 
+  let previewCache = $state<Record<string, { image?: string | null; favicon?: string; domain?: string }>>({});
+
+  function getDomain(link: string) {
+    try {
+      const url = new URL(link.startsWith("http") ? link : `https://${link}`);
+      return url.hostname.replace(/^www\./, "");
+    } catch {
+      return link;
+    }
+  }
+
+  function getFavicon(link: string) {
+    const domain = getDomain(link);
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+  }
+
+  $effect(() => {
+    for (const gift of gifts) {
+      if (gift.link && !(gift.link in previewCache)) {
+        previewCache[gift.link] = {
+          domain: getDomain(gift.link),
+          favicon: getFavicon(gift.link),
+          image: null,
+        };
+        fetch(`/api/preview?url=${encodeURIComponent(gift.link)}`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (data && gift.link) {
+              previewCache[gift.link] = {
+                domain: data.domain || getDomain(gift.link),
+                favicon: data.favicon || getFavicon(gift.link),
+                image: data.image || null,
+              };
+            }
+          })
+          .catch(() => {});
+      }
+    }
+  });
+
   let displayedGifts = $derived.by(() => {
     if (props.data.isOwner) {
       return gifts;
@@ -237,9 +277,9 @@
           ondragleave={() => props.data.isOwner && handleDragLeave(index)}
           ondrop={(e) => props.data.isOwner && handleDrop(e, index)}
           ondragend={() => props.data.isOwner && handleDragEnd()}
-          class="w-full flex items-start gap-4 p-6 rounded-2xl border transition-all duration-200 {isDragging ? 'opacity-40 border-dashed border-indigo-400 bg-white' : isTarget ? 'border-indigo-500 ring-2 ring-indigo-200 bg-indigo-50/20' : isEditing ? 'bg-white border-indigo-400 ring-2 ring-indigo-200/50 shadow-sm' : isPurchasedForViewer ? 'bg-slate-50 border-slate-200 opacity-75 shadow-xs' : 'bg-white border-slate-200 shadow-sm hover:shadow-md'}"
+          class="w-full flex items-stretch rounded-2xl border overflow-hidden transition-all duration-200 {isDragging ? 'opacity-40 border-dashed border-indigo-400 bg-white' : isTarget ? 'border-indigo-500 ring-2 ring-indigo-200 bg-indigo-50/20' : isEditing ? 'bg-white border-indigo-400 ring-2 ring-indigo-200/50 shadow-sm' : isPurchasedForViewer ? 'bg-slate-50 border-slate-200 opacity-75 shadow-xs' : 'bg-white border-slate-200 shadow-sm hover:shadow-md'}"
         >
-          <div class="flex items-center gap-2 bg-slate-100/80 border border-slate-200/80 rounded-2xl px-3 py-1.5 shadow-xs shrink-0 select-none mt-1">
+          <div class="w-[12%] min-w-[90px] max-w-[130px] bg-slate-100/90 border-r border-slate-200/80 flex flex-row items-center justify-center gap-2.5 p-3 shrink-0 select-none">
             {#if props.data.isOwner}
               <div
                 class="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 transition-colors"
@@ -283,12 +323,41 @@
             {/if}
           </div>
 
+          {#if gift.link && !isEditing}
+            {@const preview = previewCache[gift.link]}
+            <div class="relative w-24 h-24 shrink-0 rounded-xl overflow-hidden bg-slate-50 border border-slate-200/80 flex items-center justify-center my-auto ml-5 shadow-2xs">
+              {#if preview?.image}
+                <img
+                  src={preview.image}
+                  alt={gift.name}
+                  class="w-full h-full object-cover"
+                />
+              {:else}
+                <div class="flex flex-col items-center justify-center gap-1 p-2 text-center text-slate-400">
+                  {#if preview?.favicon}
+                    <img src={preview.favicon} alt="favicon" class="w-7 h-7 object-contain" />
+                  {:else}
+                    <svg class="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                  {/if}
+                </div>
+              {/if}
+
+              {#if preview?.favicon && preview?.image}
+                <div class="absolute bottom-1 right-1 w-5 h-5 rounded-md bg-white p-0.5 shadow-2xs border border-slate-200 flex items-center justify-center">
+                  <img src={preview.favicon} alt="" class="w-3.5 h-3.5 object-contain" />
+                </div>
+              {/if}
+            </div>
+          {/if}
+
           <form
             onsubmit={(e) => {
               e.preventDefault();
               if (isEditing) saveEditing(gift.id);
             }}
-            class="flex-1 flex flex-col gap-3 min-w-0"
+            class="flex-1 p-6 flex flex-col gap-3 min-w-0"
           >
             <div class="flex items-start justify-between gap-4">
               <div class="flex-1 flex flex-col gap-2 min-w-0">
@@ -311,13 +380,17 @@
                     {gift.name}
                   </h3>
                   {#if gift.link}
+                    {@const preview = previewCache[gift.link]}
                     <a
                       href={gift.link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      class="text-sm text-indigo-600 hover:text-indigo-800 hover:underline transition-colors truncate block"
+                      class="inline-flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 hover:underline transition-colors max-w-full font-medium"
                     >
-                      {gift.link}
+                      {#if preview?.favicon}
+                        <img src={preview.favicon} alt="" class="w-4 h-4 shrink-0 object-contain" />
+                      {/if}
+                      <span class="truncate">{preview?.domain || gift.link}</span>
                     </a>
                   {/if}
                 {/if}

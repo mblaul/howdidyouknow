@@ -1,5 +1,5 @@
 import type { InferSelectModel } from "drizzle-orm";
-import { boolean, integer, pgTable, text, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+import { integer, pgTable, text, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 
 // Helpers
 const timestamps = {
