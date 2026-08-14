@@ -1,5 +1,5 @@
 import type { InferSelectModel } from "drizzle-orm";
-import { integer, pgTable, text, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, text, timestamp, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 
 // Helpers
 const timestamps = {
@@ -24,6 +24,8 @@ export const giftsTable = pgTable("gifts", {
   link: text("link"),
   description: text("description"),
   position: integer("position").default(0).notNull(),
+  purchasedByUserId: uuid("purchased_by_user_id").references(() => usersTable.id),
+  purchasedAt: timestamp("purchased_at"),
   userId: uuid("user_id")
     .notNull()
     .references(() => usersTable.id),

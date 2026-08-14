@@ -37,6 +37,11 @@ export const actions = {
     const maxPosition = result[0]?.maxPos ?? -1;
     const newPosition = maxPosition + 1;
 
+    const userId = event.locals.user?.id;
+    if (!userId) {
+      throw redirect(302, "/login");
+    }
+
     await db
       .insert(giftsTable)
       .values({
@@ -45,7 +50,7 @@ export const actions = {
         description: form.data.description || null,
         position: newPosition,
         wishlistId,
-        userId: event.locals.user.id,
+        userId,
       })
       .returning()
       .execute();

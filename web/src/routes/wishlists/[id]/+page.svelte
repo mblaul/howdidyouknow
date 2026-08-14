@@ -2,6 +2,7 @@
   import AddItemModal from "$lib/components/wishlist/add-item-modal.svelte";
   import ShareWishlistModal from "$lib/components/wishlist/share-wishlist-modal.svelte";
   import Toast from "$lib/components/common/toast.svelte";
+  import { flip } from "svelte/animate";
 
   let props = $props();
   let wishlist = $state(props.data.wishlist);
@@ -22,6 +23,38 @@
   let editFields = $state<Record<string, { name: string; link: string; description: string }>>({});
   let draggedIndex = $state<number | null>(null);
   let dragOverIndex = $state<number | null>(null);
+
+  let displayedGifts = $derived.by(() => {
+    if (props.data.isOwner) {
+      return gifts;
+    }
+    return [...gifts].sort((a, b) => {
+      const aPurchased = Boolean(a.purchasedByUserId);
+      const bPurchased = Boolean(b.purchasedByUserId);
+      if (aPurchased !== bPurchased) {
+        return aPurchased ? 1 : -1;
+      }
+      return a.position - b.position;
+    });
+  });
+
+  async function togglePurchase(giftId: string, currentStatus: boolean) {
+    const nextStatus = !currentStatus;
+    const res = await fetch("/wishlists/purchase", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ giftId, isPurchased: nextStatus })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const gift = gifts.find((g: any) => g.id === giftId);
+      if (gift) {
+        gift.purchasedByUserId = nextStatus ? props.data.user?.id : null;
+        gift.purchasedAt = data.purchasedAt;
+      }
+    }
+  }
 
   function handleShareSuccess() {
     toastMessage = "Wishlist shared successfully";
@@ -180,7 +213,7 @@
     {/if}
   </div>
 
-  {#if gifts.length === 0}
+  {#if displayedGifts.length === 0}
     <div class="flex flex-col items-center justify-center p-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-center gap-4">
       <div class="flex flex-col gap-1">
         <h3 class="text-lg font-bold text-slate-900">This list is empty</h3>
@@ -191,18 +224,20 @@
     </div>
   {:else}
     <div class="flex flex-col gap-4 w-full">
-      {#each gifts as gift, index (gift.id)}
+      {#each displayedGifts as gift, index (gift.id)}
         {@const isEditing = editingGiftId === gift.id}
         {@const isDragging = draggedIndex === index}
         {@const isTarget = dragOverIndex === index}
+        {@const isPurchasedForViewer = !props.data.isOwner && Boolean(gift.purchasedByUserId)}
         <div
+          animate:flip={{ duration: 300 }}
           draggable={props.data.isOwner && !isEditing}
           ondragstart={(e) => props.data.isOwner && handleDragStart(e, index)}
           ondragover={(e) => props.data.isOwner && handleDragOver(e, index)}
           ondragleave={() => props.data.isOwner && handleDragLeave(index)}
           ondrop={(e) => props.data.isOwner && handleDrop(e, index)}
           ondragend={() => props.data.isOwner && handleDragEnd()}
-          class="w-full flex items-start gap-4 p-6 rounded-2xl border transition-all duration-200 {isDragging ? 'opacity-40 border-dashed border-indigo-400 bg-white' : isTarget ? 'border-indigo-500 ring-2 ring-indigo-200 bg-indigo-50/20' : isEditing ? 'bg-white border-indigo-400 ring-2 ring-indigo-200/50 shadow-sm' : 'bg-white border-slate-200 shadow-sm hover:shadow-md'}"
+          class="w-full flex items-start gap-4 p-6 rounded-2xl border transition-all duration-200 {isDragging ? 'opacity-40 border-dashed border-indigo-400 bg-white' : isTarget ? 'border-indigo-500 ring-2 ring-indigo-200 bg-indigo-50/20' : isEditing ? 'bg-white border-indigo-400 ring-2 ring-indigo-200/50 shadow-sm' : isPurchasedForViewer ? 'bg-slate-50 border-slate-200 opacity-75 shadow-xs' : 'bg-white border-slate-200 shadow-sm hover:shadow-md'}"
         >
           <div class="flex items-center gap-2 bg-slate-100/80 border border-slate-200/80 rounded-2xl px-3 py-1.5 shadow-xs shrink-0 select-none mt-1">
             {#if props.data.isOwner}
@@ -222,21 +257,27 @@
               <div class="flex flex-col justify-center gap-0.5 leading-none">
                 <button
                   type="button"
-                  class="text-[10px] text-slate-400 hover:text-indigo-600 transition-colors disabled:opacity-30 p-0"
+                  class="text-slate-400 hover:text-indigo-600 transition-colors disabled:opacity-20 p-0"
                   disabled={index === 0 || isEditing}
                   onclick={() => moveItem(index, "up")}
                   title="Move up"
+                  aria-label="Move up"
                 >
-                  Up
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+                  </svg>
                 </button>
                 <button
                   type="button"
-                  class="text-[10px] text-slate-400 hover:text-indigo-600 transition-colors disabled:opacity-30 p-0"
+                  class="text-slate-400 hover:text-indigo-600 transition-colors disabled:opacity-20 p-0"
                   disabled={index === gifts.length - 1 || isEditing}
                   onclick={() => moveItem(index, "down")}
                   title="Move down"
+                  aria-label="Move down"
                 >
-                  Down
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
                 </button>
               </div>
             {/if}
@@ -266,7 +307,7 @@
                     placeholder="Link (e.g. https://google.com)"
                   />
                 {:else}
-                  <h3 class="text-xl font-bold text-slate-900 leading-tight">
+                  <h3 class="text-xl font-bold text-slate-900 leading-tight {isPurchasedForViewer ? 'line-through text-slate-500' : ''}">
                     {gift.name}
                   </h3>
                   {#if gift.link}
@@ -316,6 +357,28 @@
                       Delete
                     </button>
                   {/if}
+                </div>
+              {:else}
+                <div class="flex items-center gap-2 shrink-0">
+                  <label class="flex items-center gap-2 cursor-pointer select-none text-sm font-semibold px-3 py-1.5 rounded-lg border transition-colors {gift.purchasedByUserId ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'}">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(gift.purchasedByUserId)}
+                      onchange={() => togglePurchase(gift.id, Boolean(gift.purchasedByUserId))}
+                      class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 cursor-pointer"
+                    />
+                    <span>
+                      {#if gift.purchasedByUserId}
+                        {#if gift.purchasedAt}
+                          Purchased on {new Date(gift.purchasedAt).toLocaleDateString()}
+                        {:else}
+                          Purchased
+                        {/if}
+                      {:else}
+                        Mark as Purchased
+                      {/if}
+                    </span>
+                  </label>
                 </div>
               {/if}
             </div>
