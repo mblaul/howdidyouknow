@@ -3,6 +3,7 @@
   import ShareWishlistModal from "$lib/components/wishlist/share-wishlist-modal.svelte";
   import Toast from "$lib/components/common/toast.svelte";
   import { flip } from "svelte/animate";
+  import { dragHandleZone, dragHandle } from "svelte-dnd-action";
 
   let props = $props();
   let wishlist = $state(props.data.wishlist);
@@ -20,49 +21,13 @@
   let toastMessage = $state("");
 
   let editingGiftId = $state<string | null>(null);
+  let openMenuGiftId = $state<string | null>(null);
   let editFields = $state<Record<string, { name: string; link: string; description: string }>>({});
-  let draggedIndex = $state<number | null>(null);
-  let dragOverIndex = $state<number | null>(null);
 
-  let previewCache = $state<Record<string, { image?: string | null; favicon?: string; domain?: string }>>({});
-
-  function getDomain(link: string) {
-    try {
-      const url = new URL(link.startsWith("http") ? link : `https://${link}`);
-      return url.hostname.replace(/^www\./, "");
-    } catch {
-      return link;
-    }
+  function toggleMenu(giftId: string, event: MouseEvent) {
+    event.stopPropagation();
+    openMenuGiftId = openMenuGiftId === giftId ? null : giftId;
   }
-
-  function getFavicon(link: string) {
-    const domain = getDomain(link);
-    return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-  }
-
-  $effect(() => {
-    for (const gift of gifts) {
-      if (gift.link && !(gift.link in previewCache)) {
-        previewCache[gift.link] = {
-          domain: getDomain(gift.link),
-          favicon: getFavicon(gift.link),
-          image: null,
-        };
-        fetch(`/api/preview?url=${encodeURIComponent(gift.link)}`)
-          .then((res) => (res.ok ? res.json() : null))
-          .then((data) => {
-            if (data && gift.link) {
-              previewCache[gift.link] = {
-                domain: data.domain || getDomain(gift.link),
-                favicon: data.favicon || getFavicon(gift.link),
-                image: data.image || null,
-              };
-            }
-          })
-          .catch(() => {});
-      }
-    }
-  });
 
   let displayedGifts = $derived.by(() => {
     if (props.data.isOwner) {
@@ -77,6 +42,18 @@
       return a.position - b.position;
     });
   });
+
+  function getItemNumber(gift: any, index: number) {
+    if (props.data.isOwner) {
+      return index + 1;
+    }
+    const isPurchased = Boolean(gift.purchasedByUserId);
+    if (!isPurchased) {
+      return index + 1;
+    }
+    const unpurchasedCount = displayedGifts.filter((g: any) => !g.purchasedByUserId).length;
+    return index - unpurchasedCount + 1;
+  }
 
   async function togglePurchase(giftId: string, currentStatus: boolean) {
     const nextStatus = !currentStatus;
@@ -102,6 +79,7 @@
   }
 
   function startEditing(gift: any) {
+    openMenuGiftId = null;
     editingGiftId = gift.id;
     editFields[gift.id] = {
       name: gift.name || "",
@@ -111,8 +89,19 @@
   }
 
   function cancelEditing() {
+    openMenuGiftId = null;
     editingGiftId = null;
   }
+
+  $effect(() => {
+    function handleWindowClick() {
+      openMenuGiftId = null;
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("click", handleWindowClick);
+      return () => window.removeEventListener("click", handleWindowClick);
+    }
+  });
 
   async function saveEditing(giftId: string) {
     const dataToSave = editFields[giftId];
@@ -167,43 +156,15 @@
     persistOrder(newGifts);
   }
 
-  function handleDragStart(e: DragEvent, index: number) {
-    draggedIndex = index;
-    if (e.dataTransfer) {
-      e.dataTransfer.effectAllowed = "move";
-      e.dataTransfer.setData("text/plain", index.toString());
-    }
+  const flipDurationMs = 150;
+
+  function handleDndConsider(e: CustomEvent<{ items: any[] }>) {
+    gifts = e.detail.items;
   }
 
-  function handleDragOver(e: DragEvent, index: number) {
-    e.preventDefault();
-    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-    dragOverIndex = index;
-  }
-
-  function handleDragLeave(index: number) {
-    if (dragOverIndex === index) dragOverIndex = null;
-  }
-
-  function handleDrop(e: DragEvent, dropIndex: number) {
-    e.preventDefault();
-    if (draggedIndex === null || draggedIndex === dropIndex) {
-      draggedIndex = null;
-      dragOverIndex = null;
-      return;
-    }
-
-    const newGifts = [...gifts];
-    const [draggedItem] = newGifts.splice(draggedIndex, 1);
-    newGifts.splice(dropIndex, 0, draggedItem);
-    draggedIndex = null;
-    dragOverIndex = null;
-    persistOrder(newGifts);
-  }
-
-  function handleDragEnd() {
-    draggedIndex = null;
-    dragOverIndex = null;
+  function handleDndFinalize(e: CustomEvent<{ items: any[] }>) {
+    gifts = e.detail.items;
+    persistOrder(gifts);
   }
 
   async function deleteGift(giftId: string, index: number) {
@@ -228,24 +189,24 @@
     </a>
   </div>
 
-  <div class="flex justify-between items-center border-b border-slate-200 pb-6">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-6 gap-4">
     <div>
-      <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">{wishlist.name}</h1>
-      <p class="text-slate-500 mt-1">Items in this wishlist, ordered by preference.</p>
+      <h1 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">{wishlist.name}</h1>
+      <p class="text-xs sm:text-sm text-slate-500 mt-1">Items in this wishlist, ordered by preference.</p>
     </div>
     {#if props.data.isOwner}
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
         <button
           type="button"
           onclick={() => (isShareModalOpen = true)}
-          class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
+          class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
         >
           Share
         </button>
         <button
           type="button"
           onclick={() => (isModalOpen = true)}
-          class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-indigo-700 transition-colors"
+          class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm font-semibold text-white shadow hover:bg-indigo-700 transition-colors"
         >
           Add Item
         </button>
@@ -263,182 +224,222 @@
       </div>
     </div>
   {:else}
-    <div class="flex flex-col gap-4 w-full">
+    <div
+      class="flex flex-col gap-4 w-full outline-none"
+      use:dragHandleZone={{
+        items: displayedGifts,
+        flipDurationMs,
+        dragDisabled: !props.data.isOwner || Boolean(editingGiftId),
+        useCursorForDetection: true,
+        dropTargetStyle: {
+          outline: "2px dashed rgba(99, 102, 241, 0.4)",
+          outlineOffset: "6px",
+          borderRadius: "1rem"
+        },
+        transformDraggedElement: (element) => {
+          if (element) {
+            element.style.borderColor = "#818cf8";
+            element.style.boxShadow = "0 20px 25px -5px rgba(99, 102, 241, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1)";
+          }
+        }
+      }}
+      onconsider={handleDndConsider}
+      onfinalize={handleDndFinalize}
+    >
       {#each displayedGifts as gift, index (gift.id)}
         {@const isEditing = editingGiftId === gift.id}
-        {@const isDragging = draggedIndex === index}
-        {@const isTarget = dragOverIndex === index}
         {@const isPurchasedForViewer = !props.data.isOwner && Boolean(gift.purchasedByUserId)}
         <div
-          animate:flip={{ duration: 300 }}
-          draggable={props.data.isOwner && !isEditing}
-          ondragstart={(e) => props.data.isOwner && handleDragStart(e, index)}
-          ondragover={(e) => props.data.isOwner && handleDragOver(e, index)}
-          ondragleave={() => props.data.isOwner && handleDragLeave(index)}
-          ondrop={(e) => props.data.isOwner && handleDrop(e, index)}
-          ondragend={() => props.data.isOwner && handleDragEnd()}
-          class="w-full flex items-stretch rounded-2xl border overflow-hidden transition-all duration-200 {isDragging ? 'opacity-40 border-dashed border-indigo-400 bg-white' : isTarget ? 'border-indigo-500 ring-2 ring-indigo-200 bg-indigo-50/20' : isEditing ? 'bg-white border-indigo-400 ring-2 ring-indigo-200/50 shadow-sm' : isPurchasedForViewer ? 'bg-slate-50 border-slate-200 opacity-75 shadow-xs' : 'bg-white border-slate-200 shadow-sm hover:shadow-md'}"
+          animate:flip={{ duration: flipDurationMs }}
+          class="w-full flex items-stretch rounded-2xl border transition-all duration-200 {openMenuGiftId === gift.id ? 'relative z-30' : 'relative z-0'} {isEditing ? 'bg-white border-indigo-400 ring-2 ring-indigo-200/50 shadow-sm' : isPurchasedForViewer ? 'bg-slate-50 border-slate-200 opacity-75 shadow-xs' : 'bg-white border-slate-200 shadow-sm hover:shadow-md'}"
         >
-          <div class="w-[12%] min-w-[90px] max-w-[130px] bg-slate-100/90 border-r border-slate-200/80 flex flex-row items-center justify-center gap-2.5 p-3 shrink-0 select-none">
+          <div
+            class="bg-slate-100/90 border-r border-slate-200/80 rounded-l-[15px] flex flex-row items-stretch shrink-0 select-none"
+          >
             {#if props.data.isOwner}
-              <div
-                class="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 transition-colors"
-                title="Drag to reorder"
-              >
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M7 4a1 1 0 100-2 1 1 0 000 2zm0 7a1 1 0 100-2 1 1 0 000 2zm0 7a1 1 0 100-2 1 1 0 000 2zm6-14a1 1 0 100-2 1 1 0 000 2zm0 7a1 1 0 100-2 1 1 0 000 2zm0 7a1 1 0 100-2 1 1 0 000 2z" />
-                </svg>
-              </div>
-            {/if}
-
-            <span class="text-sm font-bold text-slate-800">#{index + 1}</span>
-
-            {#if props.data.isOwner}
-              <div class="flex flex-col justify-center gap-0.5 leading-none">
+              <div class="flex flex-col items-center justify-between py-2 px-1.5 sm:px-2 min-h-[90px]">
                 <button
                   type="button"
-                  class="text-slate-400 hover:text-indigo-600 transition-colors disabled:opacity-20 p-0"
+                  class="text-slate-400 hover:text-indigo-600 transition-colors disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer p-0.5"
                   disabled={index === 0 || isEditing}
-                  onclick={() => moveItem(index, "up")}
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    moveItem(index, "up");
+                  }}
                   title="Move up"
                   aria-label="Move up"
                 >
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                  <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
                   </svg>
                 </button>
+
+                <div
+                  use:dragHandle
+                  aria-label="Drag handle for {gift.name}"
+                  class="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 transition-colors p-0.5 my-auto"
+                  title="Drag to reorder"
+                >
+                  <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M7 4a1 1 0 100-2 1 1 0 000 2zm0 7a1 1 0 100-2 1 1 0 000 2zm0 7a1 1 0 100-2 1 1 0 000 2zm6-14a1 1 0 100-2 1 1 0 000 2zm0 7a1 1 0 100-2 1 1 0 000 2zm0 7a1 1 0 100-2 1 1 0 000 2z" />
+                  </svg>
+                </div>
+
                 <button
                   type="button"
-                  class="text-slate-400 hover:text-indigo-600 transition-colors disabled:opacity-20 p-0"
+                  class="text-slate-400 hover:text-indigo-600 transition-colors disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer p-0.5"
                   disabled={index === gifts.length - 1 || isEditing}
-                  onclick={() => moveItem(index, "down")}
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    moveItem(index, "down");
+                  }}
                   title="Move down"
                   aria-label="Move down"
                 >
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                  <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
               </div>
             {/if}
-          </div>
 
-          {#if gift.link && !isEditing}
-            {@const preview = previewCache[gift.link]}
-            <div class="relative w-24 h-24 shrink-0 rounded-xl overflow-hidden bg-slate-50 border border-slate-200/80 flex items-center justify-center my-auto ml-5 shadow-2xs">
-              {#if preview?.image}
-                <img
-                  src={preview.image}
-                  alt={gift.name}
-                  class="w-full h-full object-cover"
-                />
-              {:else}
-                <div class="flex flex-col items-center justify-center gap-1 p-2 text-center text-slate-400">
-                  {#if preview?.favicon}
-                    <img src={preview.favicon} alt="favicon" class="w-7 h-7 object-contain" />
-                  {:else}
-                    <svg class="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                    </svg>
-                  {/if}
-                </div>
-              {/if}
-
-              {#if preview?.favicon && preview?.image}
-                <div class="absolute bottom-1 right-1 w-5 h-5 rounded-md bg-white p-0.5 shadow-2xs border border-slate-200 flex items-center justify-center">
-                  <img src={preview.favicon} alt="" class="w-3.5 h-3.5 object-contain" />
-                </div>
-              {/if}
+            <div class="flex items-center justify-center px-3 sm:px-4 min-w-[38px] sm:min-w-[48px]">
+              <span class="text-base sm:text-lg font-bold text-slate-800">#{getItemNumber(gift, index)}</span>
             </div>
-          {/if}
+          </div>
 
           <form
             onsubmit={(e) => {
               e.preventDefault();
               if (isEditing) saveEditing(gift.id);
             }}
-            class="flex-1 p-6 flex flex-col gap-3 min-w-0"
+            class="flex-1 p-3 sm:p-6 flex flex-col gap-1.5 sm:gap-3 min-w-0"
           >
-            <div class="flex items-start justify-between gap-4">
-              <div class="flex-1 flex flex-col gap-2 min-w-0">
+            <div class="flex items-start justify-between gap-2 sm:gap-4">
+              <div class="flex-1 flex flex-col gap-1 sm:gap-2 min-w-0">
                 {#if isEditing}
                   <input
                     type="text"
                     required
                     bind:value={editFields[gift.id].name}
-                    class="w-full text-lg font-bold text-slate-900 bg-white border border-slate-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none box-border"
+                    class="w-full text-base sm:text-lg font-bold text-slate-900 bg-white border border-slate-300 rounded-lg px-2.5 py-1 sm:px-3 sm:py-1.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none box-border"
                     placeholder="Item name"
                   />
                   <input
                     type="text"
                     bind:value={editFields[gift.id].link}
-                    class="w-full text-sm text-slate-700 bg-white border border-slate-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none box-border"
+                    class="w-full text-xs sm:text-sm text-slate-700 bg-white border border-slate-300 rounded-lg px-2.5 py-1 sm:px-3 sm:py-1.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none box-border"
                     placeholder="Link (e.g. https://google.com)"
                   />
                 {:else}
-                  <h3 class="text-xl font-bold text-slate-900 leading-tight {isPurchasedForViewer ? 'line-through text-slate-500' : ''}">
+                  <h3 class="text-base sm:text-xl font-bold text-slate-900 leading-tight break-words {isPurchasedForViewer ? 'line-through text-slate-500' : ''}">
                     {gift.name}
                   </h3>
                   {#if gift.link}
-                    {@const preview = previewCache[gift.link]}
                     <a
-                      href={gift.link}
+                      href={gift.link.startsWith("http://") || gift.link.startsWith("https://") ? gift.link : `https://${gift.link}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      class="inline-flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 hover:underline transition-colors max-w-full font-medium"
+                      class="inline-flex items-center gap-1.5 text-xs sm:text-sm text-indigo-600 hover:text-indigo-800 hover:underline transition-colors max-w-full font-medium min-w-0"
                     >
-                      {#if preview?.favicon}
-                        <img src={preview.favicon} alt="" class="w-4 h-4 shrink-0 object-contain" />
-                      {/if}
-                      <span class="truncate">{preview?.domain || gift.link}</span>
+                      <svg class="w-3.5 h-3.5 shrink-0 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                      </svg>
+                      <span class="truncate block min-w-0">{gift.link}</span>
                     </a>
                   {/if}
                 {/if}
               </div>
 
               {#if props.data.isOwner}
-                <div class="flex items-center gap-2 shrink-0">
+                <div class="flex items-center gap-1 sm:gap-2 shrink-0">
                   {#if isEditing}
                     <button
                       type="submit"
-                      class="text-sm font-semibold px-4 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs"
+                      class="text-xs sm:text-sm font-semibold px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs"
                     >
                       Save
                     </button>
                     <button
                       type="button"
                       onclick={cancelEditing}
-                      class="text-sm font-semibold px-4 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+                      class="text-xs sm:text-sm font-semibold px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
                     >
                       Cancel
                     </button>
                   {:else}
-                    <button
-                      type="button"
-                      title="Edit item"
-                      class="text-sm font-semibold text-slate-700 hover:text-indigo-600 transition-colors px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 shadow-xs"
-                      onclick={() => startEditing(gift)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      title="Delete item"
-                      class="text-sm font-semibold text-slate-500 hover:text-red-600 transition-colors px-2 py-1.5 rounded-lg hover:bg-red-50 border border-transparent"
-                      onclick={() => deleteGift(gift.id, index)}
-                    >
-                      Delete
-                    </button>
+                    <!-- Desktop buttons -->
+                    <div class="hidden sm:flex items-center gap-2">
+                      <button
+                        type="button"
+                        title="Edit item"
+                        class="text-sm font-semibold text-slate-700 hover:text-indigo-600 transition-colors px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 shadow-xs"
+                        onclick={() => startEditing(gift)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        title="Delete item"
+                        class="text-sm font-semibold text-slate-500 hover:text-red-600 transition-colors px-2 py-1.5 rounded-lg hover:bg-red-50 border border-transparent"
+                        onclick={() => deleteGift(gift.id, index)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+
+                    <!-- Mobile 3-dot dropdown -->
+                    <div class="relative sm:hidden">
+                      <button
+                        type="button"
+                        title="More options"
+                        aria-label="More options"
+                        class="p-1 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                        onclick={(e) => toggleMenu(gift.id, e)}
+                      >
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                        </svg>
+                      </button>
+
+                      {#if openMenuGiftId === gift.id}
+                        <div class="absolute right-0 mt-1 w-32 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-50">
+                          <button
+                            type="button"
+                            class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                            onclick={() => startEditing(gift)}
+                          >
+                            <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            class="w-full text-left px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            onclick={() => {
+                              openMenuGiftId = null;
+                              deleteGift(gift.id, index);
+                            }}
+                          >
+                            <svg class="w-3.5 h-3.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Delete
+                          </button>
+                        </div>
+                      {/if}
+                    </div>
                   {/if}
                 </div>
               {:else}
-                <div class="flex items-center gap-2 shrink-0">
-                  <label class="flex items-center gap-2 cursor-pointer select-none text-sm font-semibold px-3 py-1.5 rounded-lg border transition-colors {gift.purchasedByUserId ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'}">
+                <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                  <label class="flex items-center gap-1.5 sm:gap-2 cursor-pointer select-none text-xs sm:text-sm font-semibold px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg border transition-colors {gift.purchasedByUserId ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'}">
                     <input
                       type="checkbox"
                       checked={Boolean(gift.purchasedByUserId)}
                       onchange={() => togglePurchase(gift.id, Boolean(gift.purchasedByUserId))}
-                      class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 cursor-pointer"
+                      class="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 cursor-pointer"
                     />
                     <span>
                       {#if gift.purchasedByUserId}
@@ -460,14 +461,14 @@
               <textarea
                 bind:value={editFields[gift.id].description}
                 rows="2"
-                class="w-full text-sm text-slate-700 bg-white border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-y"
+                class="w-full text-xs sm:text-sm text-slate-700 bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-y min-w-0 max-w-full box-border"
                 placeholder="Optional description"
               ></textarea>
             {:else if gift.description}
-              <p class="text-sm text-slate-700 line-clamp-2">{gift.description}</p>
+              <p class="text-xs sm:text-sm text-slate-700 break-words [overflow-wrap:anywhere] whitespace-pre-wrap max-w-full min-w-0">{gift.description}</p>
             {/if}
 
-            <p class="text-xs text-slate-400">Added on {new Date(gift.createdAt).toLocaleDateString()}</p>
+            <p class="text-[10px] sm:text-xs text-slate-400">Added on {new Date(gift.createdAt).toLocaleDateString()}</p>
           </form>
         </div>
       {/each}
