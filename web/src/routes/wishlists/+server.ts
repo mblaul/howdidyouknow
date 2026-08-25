@@ -4,6 +4,11 @@ import { json, type RequestHandler } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
 export const DELETE: RequestHandler = async (event) => {
+  const userId = event.locals.user?.id;
+  if (!userId) {
+    return json({ status: 401, message: "Unauthorized" }, { status: 401 });
+  }
+
   const { id } = await event.request.json();
 
   try {
@@ -11,7 +16,7 @@ export const DELETE: RequestHandler = async (event) => {
       .update(giftsTable)
       .set({ deletedAt: new Date() })
       .where(
-        and(eq(giftsTable.userId, event.locals.user.id), eq(giftsTable.id, id)),
+        and(eq(giftsTable.userId, userId), eq(giftsTable.id, id)),
       )
       .execute();
 
