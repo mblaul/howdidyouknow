@@ -1,19 +1,24 @@
 import nodemailer from "nodemailer";
 import type JSONTransport from "nodemailer/lib/json-transport";
+import type SMTPTransport from "nodemailer/lib/smtp-transport";
+import { ENV } from "varlock/env";
 
-export function getTransportOptions(): JSONTransport | JSONTransport.Options {
-  if (process.env.NODE_ENV === undefined) {
-    throw Error("NODE_ENV not defined for mailer config");
+export function getTransportOptions(): JSONTransport | JSONTransport.Options | SMTPTransport.Options {
+  if (ENV.NODE_ENV === "production" || ENV.RESEND_API_KEY) {
+    return {
+      host: "smtp.resend.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: "resend",
+        pass: ENV.RESEND_API_KEY,
+      },
+    };
   }
 
-  switch (process.env.NODE_ENV) {
-    case "development":
-    default: {
-      return {
-        jsonTransport: true,
-      };
-    }
-  }
+  return {
+    jsonTransport: true,
+  };
 }
 
 export const nodemailerTransport = nodemailer.createTransport(

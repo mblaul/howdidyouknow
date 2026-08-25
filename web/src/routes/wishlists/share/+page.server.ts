@@ -104,9 +104,7 @@ export const actions = {
 
     // 4. Construct share URL
     const shareUrl = `${event.url.origin}/wishlists/${wishlistId}?token=${token}`;
-    console.log(`\n========================================`);
-    console.log(`📨 WISHLIST SHARE LINK: ${shareUrl}`);
-    console.log(`========================================\n`);
+
 
     // 5. Send email
     try {
@@ -116,7 +114,7 @@ export const actions = {
         subject: `Wishlist Shared: ${wishlist[0].name}`,
         text: `You have been given access to view "${wishlist[0].name}"! Access it here: ${shareUrl}`,
       });
-      console.log("Nodemailer info:", info.message);
+      console.log("Nodemailer info:", info.messageId);
     } catch (err) {
       console.error("Failed to send email:", err);
     }

@@ -5,11 +5,15 @@ import {
   generateSessionToken,
   createSession,
 } from "$lib/server/auth";
-import { db } from "$lib/db";
+import { db, runMigrations } from "$lib/db";
 import { wishlistSharesTable } from "$lib/db/schema";
 import { and, eq } from "drizzle-orm";
 
 import type { Handle } from "@sveltejs/kit";
+
+// Run migrations on server boot
+const migrationPromise = runMigrations();
+
 
 export const handle: Handle = async ({ event, resolve }) => {
   let token = event.cookies.get("session") ?? null;

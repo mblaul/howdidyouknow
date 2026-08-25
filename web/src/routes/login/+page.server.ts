@@ -65,9 +65,7 @@ export const actions = {
     await createSession(token, userId);
 
     const loginUrl = `${event.url.origin}/login?token=${token}`;
-    console.log(`\n========================================`);
-    console.log(`📨 LOGIN LINK: ${loginUrl}`);
-    console.log(`========================================\n`);
+
 
     try {
       const info = await nodemailerTransport.sendMail({
@@ -76,7 +74,7 @@ export const actions = {
         subject: "Your Login Link",
         text: `Here is your link to sign in: ${loginUrl}`,
       });
-      console.log("Nodemailer info:", info.message);
+      console.log("Nodemailer info:", info.messageId);
     } catch (err) {
       console.error("Email send error:", err);
     }
