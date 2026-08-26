@@ -24,4 +24,4 @@ COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/.env.schema ./
 
 EXPOSE 3000
-CMD ["bun", "run", "build/index.js"]
+CMD ["bunx", "varlock", "run", "--", "bun", "run", "build/index.js"]
