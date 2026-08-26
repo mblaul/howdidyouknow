@@ -22,6 +22,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/.env.schema ./
+COPY --from=builder /app/.env.production ./
 
 EXPOSE 3000
 CMD ["bunx", "varlock", "run", "--", "bun", "run", "build/index.js"]
