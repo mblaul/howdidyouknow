@@ -109,7 +109,7 @@ export const actions = {
     // 5. Send email
     try {
       const info = await nodemailerTransport.sendMail({
-        from: "noreply@howdidyouknow.app",
+        from: "noreply@howdidyouknow.io",
         to: email,
         subject: `Wishlist Shared: ${wishlist[0].name}`,
         text: `You have been given access to view "${wishlist[0].name}"! Access it here: ${shareUrl}`,

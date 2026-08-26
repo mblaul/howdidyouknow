@@ -69,7 +69,7 @@ export const actions = {
 
     try {
       const info = await nodemailerTransport.sendMail({
-        from: "noreply@howdidyouknow.app",
+        from: "noreply@howdidyouknow.io",
         to: form.data.email,
         subject: "Your Login Link",
         text: `Here is your link to sign in: ${loginUrl}`,
