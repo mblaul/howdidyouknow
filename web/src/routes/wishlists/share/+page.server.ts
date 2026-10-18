@@ -1,7 +1,7 @@
 import { shareWishlistFormSchema } from "$lib/components/forms/form.schema";
 import { db } from "$lib/db";
 import { usersTable, wishlistSharesTable, wishlistsTable } from "$lib/db/schema";
-import { nodemailerTransport } from "$lib/server/email";
+import { sendEmail } from "$lib/server/email";
 import { fail, redirect, error, type Actions, type RequestEvent } from "@sveltejs/kit";
 import { and, eq, isNull } from "drizzle-orm";
 import { superValidate } from "sveltekit-superforms";
@@ -108,13 +108,12 @@ export const actions = {
 
     // 5. Send email
     try {
-      const info = await nodemailerTransport.sendMail({
+      await sendEmail({
         from: "noreply@howdidyouknow.io",
         to: email,
         subject: `Wishlist Shared: ${wishlist[0].name}`,
         text: `You have been given access to view "${wishlist[0].name}"! Access it here: ${shareUrl}`,
       });
-      console.log("Nodemailer info:", info.messageId);
     } catch (err) {
       console.error("Failed to send email:", err);
     }

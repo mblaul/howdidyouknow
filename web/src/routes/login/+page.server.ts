@@ -7,7 +7,7 @@ import {
 import { fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 import type { RequestEvent } from "./$types";
-import { nodemailerTransport } from "$lib/server/email";
+import { sendEmail } from "$lib/server/email";
 import { superValidate } from "sveltekit-superforms";
 import { zod } from "sveltekit-superforms/adapters";
 import { loginFormSchema } from "$lib/components/forms/form.schema";
@@ -68,13 +68,12 @@ export const actions = {
 
 
     try {
-      const info = await nodemailerTransport.sendMail({
+      await sendEmail({
         from: "noreply@howdidyouknow.io",
         to: form.data.email,
         subject: "Your Login Link",
         text: `Here is your link to sign in: ${loginUrl}`,
       });
-      console.log("Nodemailer info:", info.messageId);
     } catch (err) {
       console.error("Email send error:", err);
     }
